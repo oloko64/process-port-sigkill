@@ -1,4 +1,6 @@
-use kill_port::{get_pids, kill_pids};
+mod manager;
+
+use manager::{Manager, ProcessManager};
 use owo_colors::OwoColorize;
 use std::{error::Error, num::ParseIntError};
 
@@ -13,13 +15,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|s| -> Result<u16, ParseIntError> { s.parse::<u16>() })
         .unwrap()?;
 
-    let pids = get_pids(port)?;
+    let pids = Manager::get_pids(port)?;
     if pids.is_empty() {
         println!("No processes found on port {}", port.yellow());
         return Ok(());
     }
 
-    kill_pids(&pids)?;
+    Manager::kill_pids(&pids)?;
 
     Ok(())
 }
