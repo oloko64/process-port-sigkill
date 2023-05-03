@@ -3,10 +3,10 @@ use owo_colors::OwoColorize;
 use regex::Regex;
 use std::{error::Error, io::Write, num::ParseIntError};
 
-static RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?m)^(?<app>[^\s]*)\s*(?<port>\d{1,5})").unwrap());
-
 pub fn get_pids(port: u16) -> Result<Vec<MyProcess>, Box<dyn Error>> {
+    static RE: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"(?m)^(?<app>[^\s]*)\s*(?<pid>\d{1,5})").unwrap());
+
     let output = std::process::Command::new("lsof")
         .arg("-i")
         .arg(format!(":{port}"))
@@ -15,10 +15,10 @@ pub fn get_pids(port: u16) -> Result<Vec<MyProcess>, Box<dyn Error>> {
     let pids: Vec<MyProcess> = RE
         .captures_iter(&String::from_utf8(output.stdout)?)
         .map(|cap| -> Result<MyProcess, ParseIntError> {
-            cap.name("port")
-                .map(|port| -> Result<MyProcess, ParseIntError> {
+            cap.name("pid")
+                .map(|pid| -> Result<MyProcess, ParseIntError> {
                     Ok(MyProcess {
-                        pid: port.as_str().parse()?,
+                        pid: pid.as_str().parse()?,
                         name: cap.name("app").unwrap().as_str().to_string(),
                     })
                 })
