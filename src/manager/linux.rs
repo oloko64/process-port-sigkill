@@ -35,7 +35,10 @@ impl ProcessManager for ProcessMangerLinux {
     }
 
     fn kill_pids(processes: &[ProcessInfo]) -> Result<(), Box<dyn Error>> {
-        for process in processes {
+        for (idx, process) in processes.iter().enumerate() {
+            if idx > 0 {
+                println!();
+            }
             // ask user for confirmation
             print!(
                 "Kill process {} with PID {}? [y/N]: ",

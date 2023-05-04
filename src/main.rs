@@ -7,7 +7,7 @@ use std::{error::Error, num::ParseIntError};
 fn main() -> Result<(), Box<dyn Error>> {
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() != 2 {
-        println!("Usage: {}", "killport <port>".green());
+        println!("Usage: {}", "kp <port>".green());
         return Ok(());
     }
     let port = args
