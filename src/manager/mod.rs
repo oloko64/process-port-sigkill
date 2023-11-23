@@ -6,12 +6,12 @@ use std::error::Error;
 pub use linux::ProcessMangerLinux as Manager;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ProcessInfo {
+pub(super) struct ProcessInfo {
     pid: u32,
     name: String,
 }
 
-pub trait ProcessManager {
+pub(super) trait ProcessManager {
     fn get_pids(port: u16) -> Result<Vec<ProcessInfo>, Box<dyn Error>>;
     fn kill_pids(processes: &[ProcessInfo]) -> Result<(), Box<dyn Error>>;
 }

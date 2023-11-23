@@ -1,7 +1,6 @@
-use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use regex::Regex;
-use std::{error::Error, io::Write, num::ParseIntError};
+use std::{error::Error, io::Write, sync::OnceLock};
 
 use super::{ProcessInfo, ProcessManager};
 
@@ -9,27 +8,30 @@ pub struct ProcessMangerLinux;
 
 impl ProcessManager for ProcessMangerLinux {
     fn get_pids(port: u16) -> Result<Vec<ProcessInfo>, Box<dyn Error>> {
-        static RE: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r"(?m)^(?<app>[^\s]*)\s*(?<pid>\d{1,5})").unwrap());
+        static INSTANCE: OnceLock<Regex> = OnceLock::new();
+        let regex_ports =
+            INSTANCE.get_or_init(|| Regex::new(r"(?m)^(?<app>[^\s]*)\s*(?<pid>\d{1,5})").unwrap());
 
         let output = std::process::Command::new("lsof")
             .arg("-i")
             .arg(format!(":{port}"))
             .output()?;
 
-        let pids: Vec<ProcessInfo> = RE
-            .captures_iter(&String::from_utf8(output.stdout)?)
-            .map(|cap| -> Result<ProcessInfo, ParseIntError> {
+        let stdout_str = String::from_utf8(output.stdout)?;
+        let captures = regex_ports.captures_iter(&stdout_str);
+
+        let pids: Vec<ProcessInfo> = captures
+            .map(|cap| {
                 cap.name("pid")
-                    .map(|pid| -> Result<ProcessInfo, ParseIntError> {
+                    .map(|pid| {
                         Ok(ProcessInfo {
-                            pid: pid.as_str().parse()?,
-                            name: cap.name("app").unwrap().as_str().to_string(),
+                            pid: pid.as_str().parse::<u32>().map_err(|_| "Invalid PID")?,
+                            name: cap.name("app").ok_or("No app name")?.as_str().to_string(),
                         })
                     })
-                    .unwrap()
+                    .ok_or("No PID")?
             })
-            .collect::<Result<Vec<ProcessInfo>, ParseIntError>>()?;
+            .collect::<Result<Vec<ProcessInfo>, &'static str>>()?;
 
         Ok(pids)
     }
