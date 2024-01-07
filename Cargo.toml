@@ -1,6 +1,6 @@
 [package]
 name = "kill-port"
-version = "0.1.1"
+version = "0.1.20"
 edition = "2021"
 
 [[bin]]
@@ -14,5 +14,5 @@ strip = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-owo-colors = "3.5.0"
+owo-colors = "4.0.0"
 regex = "1.10.2"

@@ -1,12 +1,14 @@
 use owo_colors::OwoColorize;
 use regex::Regex;
-use std::{error::Error, io::Write, sync::OnceLock};
+use std::{error::Error, sync::OnceLock};
+
+use crate::utils::ask_confirmation;
 
 use super::{ProcessInfo, ProcessManager};
 
-pub struct ProcessMangerLinux;
+pub struct ManagerLinux;
 
-impl ProcessManager for ProcessMangerLinux {
+impl ProcessManager for ManagerLinux {
     fn get_pids(port: u16) -> Result<Vec<ProcessInfo>, Box<dyn Error>> {
         static INSTANCE: OnceLock<Regex> = OnceLock::new();
         let regex_ports =
@@ -20,41 +22,45 @@ impl ProcessManager for ProcessMangerLinux {
         let stdout_str = String::from_utf8(output.stdout)?;
         let captures = regex_ports.captures_iter(&stdout_str);
 
-        let pids: Vec<ProcessInfo> = captures
+        let pids = captures
             .map(|cap| {
                 cap.name("pid")
                     .map(|pid| {
                         Ok(ProcessInfo {
-                            pid: pid.as_str().parse::<u32>().map_err(|_| "Invalid PID")?,
-                            name: cap.name("app").ok_or("No app name")?.as_str().to_string(),
+                            pid: pid.as_str().parse::<u64>().map_err(|_| "Invalid PID")?,
+                            name: Box::<str>::from(cap.name("app").ok_or("No app name")?.as_str()),
                         })
                     })
                     .ok_or("No PID")?
             })
-            .collect::<Result<Vec<ProcessInfo>, &'static str>>()?;
+            .collect::<Result<Vec<_>, &'static str>>()?;
 
         Ok(pids)
     }
 
     fn kill_pids(processes: &[ProcessInfo]) -> Result<(), Box<dyn Error>> {
+        let mut input = String::new();
+
         for (idx, process) in processes.iter().enumerate() {
             if idx > 0 {
                 println!();
             }
             // ask user for confirmation
-            print!(
-                "Kill process {} with PID {}? [y/N]: ",
+            let text = format!(
+                "Kill process {} with PID {}?",
                 process.name.magenta(),
                 process.pid.magenta()
             );
-            std::io::stdout().flush()?;
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            if !input.trim().to_lowercase().starts_with('y') {
+            if !ask_confirmation(&text, &mut input)? {
+                println!(
+                    "Skipping process {} with PID {}",
+                    process.name.magenta(),
+                    process.pid.magenta()
+                );
                 continue;
             }
 
-            std::process::Command::new("kill")
+            let _ = std::process::Command::new("kill")
                 .arg("-9")
                 .arg(process.pid.to_string())
                 .output()?;
